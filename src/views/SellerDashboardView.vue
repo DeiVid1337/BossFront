@@ -24,8 +24,11 @@ const storeId = computed(() => {
   return id
 })
 
-// Inicializar composable com storeId reativo
+// Inicializar composable com storeId reativo (aceita number | null)
 const sellerSales = useSellerSales(storeId)
+const recentSales = computed(() => sellerSales.sales.value ?? [])
+const todayRevenueFormatted = computed(() => formatCurrency(sellerSales.todayRevenue.value))
+const monthRevenueFormatted = computed(() => formatCurrency(sellerSales.monthRevenue.value))
 
 // Watch storeId para recarregar quando mudar
 watch(storeId, async (newStoreId) => {
@@ -121,7 +124,7 @@ function goToSale(saleId: number) {
           <div class="stat-content">
             <div class="stat-value">{{ sellerSales.todayCount }}</div>
             <div class="stat-label">vendas</div>
-            <div class="stat-amount">{{ formatCurrency(sellerSales.todayRevenue) }}</div>
+            <div class="stat-amount">{{ todayRevenueFormatted }}</div>
           </div>
         </div>
 
@@ -134,7 +137,7 @@ function goToSale(saleId: number) {
           <div class="stat-content">
             <div class="stat-value">{{ sellerSales.monthCount }}</div>
             <div class="stat-label">vendas</div>
-            <div class="stat-amount">{{ formatCurrency(sellerSales.monthRevenue) }}</div>
+            <div class="stat-amount">{{ monthRevenueFormatted }}</div>
           </div>
         </div>
 
@@ -171,7 +174,7 @@ function goToSale(saleId: number) {
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="sellerSales.sales.length === 0" class="empty-state">
+        <div v-else-if="recentSales.length === 0" class="empty-state">
           <p class="empty-text">Nenhuma venda registrada ainda.</p>
           <button @click="goToNewSale" class="btn-primary-empty">
             Criar Primeira Venda
@@ -183,7 +186,7 @@ function goToSale(saleId: number) {
           <!-- Mobile: Cards -->
           <div class="sales-grid-mobile">
             <div
-              v-for="sale in sellerSales.sales.slice(0, 5)"
+              v-for="sale in recentSales.slice(0, 5)"
               :key="sale.id"
               @click="goToSale(sale.id)"
               class="sale-card"
@@ -225,7 +228,7 @@ function goToSale(saleId: number) {
               </thead>
               <tbody>
                 <tr
-                  v-for="sale in sellerSales.sales.slice(0, 5)"
+                  v-for="sale in recentSales.slice(0, 5)"
                   :key="sale.id"
                   @click="goToSale(sale.id)"
                   class="table-row"

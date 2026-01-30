@@ -310,7 +310,8 @@ function isLowStock(storeProduct: any): boolean {
               :current-page="storeProductList.currentPage.value"
               :last-page="storeProductList.lastPage.value"
               :total="storeProductList.total.value"
-              @page-change="storeProductList.setPage"
+              :per-page="storeProductList.perPage.value"
+              @update:page="storeProductList.setPage"
             />
           </div>
         </div>

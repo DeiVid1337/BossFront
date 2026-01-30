@@ -249,7 +249,7 @@ function getRoleLabel(role: string): string {
             :last-page="userList.lastPage.value"
             :total="userList.total.value"
             :per-page="userList.perPage.value"
-            @page-change="(page: number) => { userList.setPage(page); userList.loadUsers() }"
+            @update:page="(page: number) => { userList.setPage(page); userList.loadUsers() }"
           />
         </div>
       </div>

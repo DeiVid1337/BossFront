@@ -211,7 +211,7 @@ watch(effectiveStoreId, (newId, oldId) => {
               <div class="detail-item">
                 <span class="detail-label">Preço de Venda:</span>
                 <span class="detail-value">
-                  {{ storeProduct.sale_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}
+                  {{ parseFloat(storeProduct.sale_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}
                 </span>
               </div>
               <div class="detail-item">

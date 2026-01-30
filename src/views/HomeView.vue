@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useStoreContext } from '@/composables/useStoreContext'
 import { getSales } from '@/api/endpoints/sales'
+import FinancialDemoSection from '@/components/domain/FinancialDemoSection.vue'
 import type { Sale } from '@/api/types'
 
 const router = useRouter()
@@ -230,6 +231,9 @@ function getRoleLabel(role: string): string {
       <div v-else class="no-store-card">
         <p class="no-store-text">Selecione uma loja para visualizar as últimas vendas.</p>
       </div>
+
+      <!-- Demonstração Financeira (mock) -->
+      <FinancialDemoSection />
     </div>
   </div>
 </template>

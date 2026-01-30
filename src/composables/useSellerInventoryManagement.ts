@@ -7,7 +7,7 @@
  * Seguindo Frontend.md: views apenas orquestram; lógica fica aqui.
  */
 
-import { computed, ref, isRef } from 'vue'
+import { computed, ref, isRef, type Ref, type ComputedRef } from 'vue'
 import { getStoreProducts } from '@/api/endpoints/storeProducts'
 import { getUser } from '@/api/endpoints/users'
 import { addSellerInventory, getSellerInventory, removeSellerInventory } from '@/api/endpoints/inventory'
@@ -41,8 +41,11 @@ function getProductLabel(storeProduct: StoreProduct): string {
   return `Produto #${storeProduct.product_id}`
 }
 
-export function useSellerInventoryManagement(storeId: number | { value: number | null }, sellerId: number) {
-  const storeIdRef = isRef(storeId) ? storeId : ref(storeId)
+export function useSellerInventoryManagement(
+  storeId: number | Ref<number | null> | ComputedRef<number | null> | { value: number | null },
+  sellerId: number
+) {
+  const storeIdRef = isRef(storeId) ? (storeId as Ref<number | null>) : ref(typeof storeId === 'number' ? storeId : (storeId as { value: number | null }).value)
   const stockSync = useStockSync(storeIdRef)
   // Dados base
   const seller = ref<User | null>(null)

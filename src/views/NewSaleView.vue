@@ -30,6 +30,8 @@ const isSeller = computed(() => authStore.user?.role === 'seller')
 
 // Cart
 const cart = useCart()
+const cartItems = computed(() => cart.items.value)
+const cartIsEmpty = computed(() => cart.isEmpty.value)
 
 // Store products
 const storeProducts = ref<StoreProduct[]>([])
@@ -447,7 +449,7 @@ async function handleSubmit() {
           has_validation_error: !!hasError,
           error_messages: hasError || [],
           product_found_in_updated_list: !!updatedProduct,
-          store_id_matches: updatedProduct?.store_id === storeId,
+          store_id_matches: updatedProduct?.store_id === storeId.value,
         })
       })
       
@@ -595,16 +597,15 @@ function formatFieldName(field: string): string {
   if (field.startsWith('items.')) {
     const match = field.match(/^items\.(\d+)\.(.+)$/)
     if (match) {
-      const itemIndex = parseInt(match[1]) + 1 // +1 para mostrar como "Item 1" ao invés de "Item 0"
+      const itemIndex = parseInt(match[1] ?? '0', 10) + 1 // +1 para mostrar como "Item 1" ao invés de "Item 0"
       const fieldName = match[2]
       
       const fieldLabels: Record<string, string> = {
         quantity: 'Quantidade',
         store_product_id: 'Produto',
-        'store_product_id': 'Produto',
       }
-      
-      const label = fieldLabels[fieldName] || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      const key = fieldName ?? 'field'
+      const label = fieldLabels[key] ?? (key as string).replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
       return `Item ${itemIndex}: ${label}`
     }
   }
@@ -770,8 +771,8 @@ watch(effectiveStoreId, (newId, oldId) => {
         </div>
 
         <!-- Cart Items -->
-        <div v-if="!cart.isEmpty.value" class="cart-items">
-          <div v-for="item in cart.items.value" :key="item.storeProduct.id" class="cart-item">
+        <div v-if="!cartIsEmpty" class="cart-items">
+          <div v-for="item in cartItems" :key="item.storeProduct.id" class="cart-item">
             <div class="cart-item-info">
               <div class="cart-item-name">
                 {{ getProductLabel(item.storeProduct) }}
@@ -823,18 +824,18 @@ watch(effectiveStoreId, (newId, oldId) => {
         <div class="cart-total">
           <div class="total-label">Total:</div>
           <div class="total-amount">
-            {{ formatPrice(cart.total.value.toString()) }}
+            {{ formatPrice(cart.total.value?.toString() ?? '0') }}
           </div>
         </div>
 
         <!-- Aviso para Sellers sem estoque -->
-        <div v-if="isSeller && cart.items.value.length > 0" class="seller-stock-warning">
-          <div v-for="item in cart.items.value" :key="item.storeProduct.id">
+        <div v-if="isSeller && cartItems.length > 0" class="seller-stock-warning">
+          <div v-for="item in cartItems" :key="item.storeProduct.id">
             <div v-if="(item.storeProduct.seller_quantity ?? 0) === 0" class="warning-item">
               <strong>{{ getProductLabel(item.storeProduct) }}</strong>
               <p>Você não tem estoque deste produto. Retire produtos do estoque da loja primeiro.</p>
               <button
-                @click="router.push(`/stores/${storeId.value}/inventory/withdraw`)"
+                @click="storeId && router.push(`/stores/${storeId}/inventory/withdraw`)"
                 class="btn-withdraw"
               >
                 Retirar Produtos

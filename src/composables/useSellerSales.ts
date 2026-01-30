@@ -8,7 +8,7 @@ import { ref, computed, type Ref, type ComputedRef } from 'vue'
 import { getSales } from '@/api/endpoints/sales'
 import type { Sale, PaginatedResponse, SalesListParams } from '@/api/types'
 
-export function useSellerSales(storeId: number | Ref<number> | ComputedRef<number>) {
+export function useSellerSales(storeId: number | Ref<number | null> | ComputedRef<number | null>) {
   // Normalizar storeId para ref
   const storeIdRef = typeof storeId === 'number' ? ref(storeId) : storeId
   // State
@@ -77,17 +77,14 @@ export function useSellerSales(storeId: number | Ref<number> | ComputedRef<numbe
 
     try {
       // Obter storeId atual (pode ser ref, computed ou number)
-      let currentStoreId: number
+      let currentStoreId: number | null = null
       if (typeof storeIdRef === 'object' && 'value' in storeIdRef) {
         currentStoreId = storeIdRef.value
       } else if (typeof storeIdRef === 'number') {
         currentStoreId = storeIdRef
-      } else {
-        error.value = 'Loja não selecionada'
-        return
       }
 
-      if (!currentStoreId || currentStoreId === 0) {
+      if (currentStoreId == null || currentStoreId === 0) {
         error.value = 'Loja não selecionada'
         return
       }
@@ -120,17 +117,14 @@ export function useSellerSales(storeId: number | Ref<number> | ComputedRef<numbe
 
     try {
       // Obter storeId atual
-      let currentStoreId: number
+      let currentStoreId: number | null = null
       if (typeof storeIdRef === 'object' && 'value' in storeIdRef) {
         currentStoreId = storeIdRef.value
       } else if (typeof storeIdRef === 'number') {
         currentStoreId = storeIdRef
-      } else {
-        statsLoading.value = false
-        return
       }
 
-      if (!currentStoreId || currentStoreId === 0) {
+      if (currentStoreId == null || currentStoreId === 0) {
         statsLoading.value = false
         return
       }

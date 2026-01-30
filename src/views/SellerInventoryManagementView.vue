@@ -191,7 +191,7 @@ watch(effectiveStoreId, (newId, oldId) => {
                   <span class="badge">Disponível: {{ line.availableToAdd }}</span>
                 </div>
                 <div v-if="addItemErrors[line.storeProduct.id]?.length" class="row-error">
-                  {{ addItemErrors[line.storeProduct.id].join(' • ') }}
+                  {{ addItemErrors[line.storeProduct.id]?.join(' • ') }}
                 </div>
               </div>
               <div class="row-qty">
@@ -264,7 +264,7 @@ watch(effectiveStoreId, (newId, oldId) => {
                   <span class="badge badge-warn">No vendedor: {{ line.availableToRemove }}</span>
                 </div>
                 <div v-if="removeItemErrors[line.storeProduct.id]?.length" class="row-error">
-                  {{ removeItemErrors[line.storeProduct.id].join(' • ') }}
+                  {{ removeItemErrors[line.storeProduct.id]?.join(' • ') }}
                 </div>
               </div>
               <div class="row-qty">
