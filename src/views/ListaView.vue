@@ -115,7 +115,7 @@ const markdownContent = computed(() => {
   productsByPrice.value.forEach(product => {
     const price = parseFloat(product.salePrice).toFixed(2).replace('.', ',')
     // Formato: 🔴 MARCA NOME - R$PRECO
-    lines.push(`🔴 *${product.brand} ${product.name} - R$${price}*`)
+    lines.push(`🔴 *${product.brand.toUpperCase()} ${product.name} - R$${price}*`)
 
     // Sabores com asterisco
     product.flavors.sort().forEach(flavor => {
