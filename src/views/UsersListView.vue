@@ -6,7 +6,7 @@
  * Admin vê todos; Manager vê apenas mesma loja; Seller não tem acesso
  */
 
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, onActivated, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUserList } from '@/composables/useUserList'
@@ -24,12 +24,25 @@ const canCreate = computed(() => isAdmin.value)
 const canEdit = computed(() => isAdmin.value)
 const canDelete = computed(() => isAdmin.value)
 
+function refreshOnVisible() {
+  if (!document.hidden) userList.loadUsers()
+}
+
 // Carregar lojas para filtro (apenas Admin)
 onMounted(async () => {
   if (isAdmin.value) {
     await storeList.loadStores()
   }
   await userList.loadUsers()
+  document.addEventListener('visibilitychange', refreshOnVisible)
+})
+
+onActivated(() => {
+  userList.loadUsers()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', refreshOnVisible)
 })
 
 // Observar mudanças na página

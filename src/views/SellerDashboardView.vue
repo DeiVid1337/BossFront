@@ -5,11 +5,12 @@
  * Seguindo Frontend.md: apenas orquestração, lógica no composable
  */
 
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, onActivated, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useStoreContext } from '@/composables/useStoreContext'
 import { useSellerSales } from '@/composables/useSellerSales'
+import { useStockSync } from '@/composables/useStockSync'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,9 +27,14 @@ const storeId = computed(() => {
 
 // Inicializar composable com storeId reativo (aceita number | null)
 const sellerSales = useSellerSales(storeId)
+const stockSync = useStockSync(storeId)
 const recentSales = computed(() => sellerSales.sales.value ?? [])
 const todayRevenueFormatted = computed(() => formatCurrency(sellerSales.todayRevenue.value))
 const monthRevenueFormatted = computed(() => formatCurrency(sellerSales.monthRevenue.value))
+
+async function refreshSellerDashboard() {
+  await Promise.all([sellerSales.loadSales(), sellerSales.loadStats()])
+}
 
 // Watch storeId para recarregar quando mudar
 watch(storeId, async (newStoreId) => {
@@ -44,16 +50,26 @@ watch(storeId, async (newStoreId) => {
   ])
 })
 
-// Carregar dados ao montar
+// Carregar dados ao montar e inscrever em atualizações em tempo real
 onMounted(async () => {
   if (storeId.value) {
-    await Promise.all([
-      sellerSales.loadSales(),
-      sellerSales.loadStats(),
-    ])
+    await refreshSellerDashboard()
+    stockSync.attachListeners(refreshSellerDashboard)
+    stockSync.refreshIfPending(refreshSellerDashboard)
   } else {
     router.push('/')
   }
+})
+
+onActivated(() => {
+  if (storeId.value) {
+    refreshSellerDashboard()
+    stockSync.refreshIfPending(refreshSellerDashboard)
+  }
+})
+
+onUnmounted(() => {
+  stockSync.detachListeners()
 })
 
 function formatCurrency(value: number): string {

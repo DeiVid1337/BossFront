@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, onActivated, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProductList } from '@/composables/useProductList'
@@ -11,8 +11,21 @@ const productList = useProductList()
 
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 
+function refreshOnVisible() {
+  if (!document.hidden) productList.loadProducts()
+}
+
 onMounted(() => {
   productList.loadProducts()
+  document.addEventListener('visibilitychange', refreshOnVisible)
+})
+
+onActivated(() => {
+  productList.loadProducts()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', refreshOnVisible)
 })
 
 watch(

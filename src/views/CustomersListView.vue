@@ -5,7 +5,7 @@
  * Seguindo DevGuide.md: busca, filtro por telefone, ordenação, paginação
  */
 
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, onActivated, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCustomerList } from '@/composables/useCustomerList'
@@ -19,9 +19,21 @@ const isAdmin = computed(() => authStore.user?.role === 'admin')
 const isManager = computed(() => authStore.user?.role === 'manager')
 const canEdit = computed(() => isAdmin.value || isManager.value)
 
-// Carregar clientes ao montar
+function refreshOnVisible() {
+  if (!document.hidden) customerList.loadCustomers()
+}
+
 onMounted(() => {
   customerList.loadCustomers()
+  document.addEventListener('visibilitychange', refreshOnVisible)
+})
+
+onActivated(() => {
+  customerList.loadCustomers()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', refreshOnVisible)
 })
 
 // Observar mudanças na página

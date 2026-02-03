@@ -5,12 +5,13 @@
  * Seguindo DevGuide.md: filtros (from, to, search), ordenação, paginação
  */
 
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, onActivated, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSaleList } from '@/composables/useSaleList'
 import Pagination from '@/components/ui/Pagination.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useEffectiveStoreId } from '@/composables/useEffectiveStoreId'
+import { useStockSync } from '@/composables/useStockSync'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,10 +20,25 @@ const authStore = useAuthStore()
 const { effectiveStoreId, routeStoreId, role, syncUrlToStore } = useEffectiveStoreId()
 
 const saleList = useSaleList(effectiveStoreId)
+const stockSync = useStockSync(effectiveStoreId)
 
-// Carregar vendas ao montar
+const refreshSales = () => saleList.loadSales(true)
+
+// Carregar vendas ao montar e inscrever em atualizações em tempo real
 onMounted(() => {
   saleList.loadSales()
+  syncUrlToStore(id => ({ path: `/stores/${id}/sales` }))
+  stockSync.attachListeners(refreshSales)
+  stockSync.refreshIfPending(refreshSales)
+})
+
+onActivated(() => {
+  saleList.loadSales()
+  stockSync.refreshIfPending(refreshSales)
+})
+
+onUnmounted(() => {
+  stockSync.detachListeners()
 })
 
 // Se trocar storeId (ex.: trocar loja no seletor), sincronizar URL e recarregar

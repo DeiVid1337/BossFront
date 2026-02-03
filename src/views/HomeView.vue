@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useStoreContext } from '@/composables/useStoreContext'
+import { useStockSync } from '@/composables/useStockSync'
 import { getSales } from '@/api/endpoints/sales'
 import FinancialDemoSection from '@/components/domain/FinancialDemoSection.vue'
 import type { Sale } from '@/api/types'
@@ -10,6 +11,8 @@ import type { Sale } from '@/api/types'
 const router = useRouter()
 const authStore = useAuthStore()
 const storeContext = useStoreContext()
+const storeIdRef = computed(() => storeContext.storeId.value)
+const stockSync = useStockSync(storeIdRef)
 
 // State
 const recentSales = ref<Sale[]>([])
@@ -53,6 +56,12 @@ watch(
 
 onMounted(() => {
   loadRecentSales()
+  stockSync.attachListeners(loadRecentSales)
+  stockSync.refreshIfPending(loadRecentSales)
+})
+
+onUnmounted(() => {
+  stockSync.detachListeners()
 })
 
 function formatCurrency(value: number): string {

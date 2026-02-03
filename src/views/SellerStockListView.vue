@@ -5,10 +5,11 @@
  * Seguindo Frontend.md: apenas orquestração, lógica no composable
  */
 
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, onActivated, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStoreContext } from '@/composables/useStoreContext'
 import { useStoreProductList } from '@/composables/useStoreProductList'
+import { useStockSync } from '@/composables/useStockSync'
 import Pagination from '@/components/ui/Pagination.vue'
 
 const route = useRoute()
@@ -24,8 +25,11 @@ const storeId = computed(() => {
   return id
 })
 
-// Inicializar composable com storeId reativo
-const storeProductList = useStoreProductList(storeId.value)
+// Inicializar composable com storeId reativo (ref/computed para reagir a mudanças)
+const storeProductList = useStoreProductList(storeId)
+const stockSync = useStockSync(storeId)
+
+const refreshProducts = () => storeProductList.loadStoreProducts(true)
 
 // Watch storeId para recarregar quando mudar
 watch(storeId, (newStoreId) => {
@@ -34,11 +38,24 @@ watch(storeId, (newStoreId) => {
   }
 })
 
-// Carregar inventário ao montar
+// Carregar inventário ao montar e inscrever em atualizações em tempo real
 onMounted(() => {
   if (storeId.value) {
     storeProductList.loadStoreProducts()
+    stockSync.attachListeners(refreshProducts)
+    stockSync.refreshIfPending(refreshProducts)
   }
+})
+
+onActivated(() => {
+  if (storeId.value) {
+    storeProductList.loadStoreProducts()
+    stockSync.refreshIfPending(refreshProducts)
+  }
+})
+
+onUnmounted(() => {
+  stockSync.detachListeners()
 })
 
 // Handlers
