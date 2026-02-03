@@ -722,10 +722,13 @@ onMounted(() => {
   }
 }
 
+/* Área da lista: fontes no padrão WhatsApp (Roboto no Android, sistema no iOS/Web) */
 .markdown-text {
-  font-family: 'Courier New', 'Courier', monospace;
-  font-size: 14px;
-  line-height: 1.8;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
   color: #FFFFFF;
   margin: 0;
   padding: 0;
@@ -738,7 +741,7 @@ onMounted(() => {
 
 @media (min-width: 640px) {
   .markdown-text {
-    font-size: 15px;
+    font-size: 16px;
   }
 }
 
