@@ -95,7 +95,7 @@ export function useSellerSales(storeId: number | Ref<number | null> | ComputedRe
         sales.value = Array.isArray(response.data) ? response.data : []
         total.value = response.meta.total || 0
         lastPage.value = response.meta.last_page || 1
-        currentPage.value = response.meta.current_page || 1
+        // Não sobrescrever currentPage (fix: paginação)
       } else {
         error.value = 'Resposta da API em formato inesperado'
         sales.value = []

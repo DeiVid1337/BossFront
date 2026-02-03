@@ -94,7 +94,7 @@ export function useStoreProductList(storeId: number | { value: number | null }) 
         links.value = response.links
         total.value = response.meta.total || 0
         lastPage.value = response.meta.last_page || 1
-        currentPage.value = response.meta.current_page || 1
+        // Não sobrescrever currentPage com response.meta.current_page (fix: paginação em /stores/:id/products)
         error.value = null
       } else {
         error.value = 'Resposta da API em formato inesperado'

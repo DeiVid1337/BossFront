@@ -82,8 +82,7 @@ export function useStoreList() {
         links.value = response.links
         total.value = response.meta.total || 0
         lastPage.value = response.meta.last_page || 1
-        currentPage.value = response.meta.current_page || 1
-        // Limpar erro se a requisição foi bem-sucedida
+        // Não sobrescrever currentPage (fix: paginação)
         error.value = null
       } else {
         // Fallback: se a resposta não tem meta, tratar como erro
