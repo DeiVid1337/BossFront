@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { getStoreProducts } from '@/api/endpoints/storeProducts'
 import { useStoreContext } from '@/composables/useStoreContext'
+import { useStockSync } from '@/composables/useStockSync'
 import type { StoreProduct } from '@/api/types'
 
 interface GroupedProduct {
@@ -22,13 +23,15 @@ const error = ref<string | null>(null)
 const storeProducts = ref<StoreProduct[]>([])
 const copySuccess = ref(false)
 
-// Agrupar produtos por marca, nome e preço
+const stockSync = useStockSync(storeId)
+
+// Agrupar produtos por marca, nome e preço (estoque = 0 não entra na lista)
 const groupedProducts = computed(() => {
   const grouped: Record<string, Record<string, GroupedProduct>> = {}
 
   storeProducts.value.forEach(sp => {
-    // Remover produtos sem product relacionado, inativos ou com estoque menor que 1
-    if (!sp.product || !sp.is_active || sp.stock_quantity < 1) {
+    // Excluir: sem product, inativo ou estoque 0 (retirado da lista automaticamente)
+    if (!sp.product || !sp.is_active || sp.stock_quantity <= 0) {
       return
     }
 
@@ -153,8 +156,8 @@ async function loadProducts() {
 
       if (response && typeof response === 'object' && 'data' in response) {
         const products = Array.isArray(response.data) ? response.data : []
-        // Filtrar apenas produtos ativos com estoque >= 1 e que tenham product relacionado
-        const filtered = products.filter(sp => sp.stock_quantity >= 1 && sp.product && sp.is_active)
+        // Estoque = 0 não entra na lista; apenas ativos com product
+        const filtered = products.filter(sp => sp.stock_quantity > 0 && sp.product && sp.is_active)
         allProducts.push(...filtered)
 
         // Verificar se há mais páginas
@@ -196,6 +199,7 @@ function copyToClipboard() {
 
 onMounted(() => {
   loadProducts()
+  stockSync.attachListeners(loadProducts)
 })
 </script>
 
