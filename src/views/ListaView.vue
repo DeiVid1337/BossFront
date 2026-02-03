@@ -59,7 +59,7 @@ const groupedProducts = computed(() => {
     }
   })
 
-  // Converter para array e ordenar
+  // Converter para array: por marca (para agrupamento) e ordenar por preço (menor → maior)
   const result: Record<string, GroupedProduct[]> = {}
   Object.keys(grouped)
     .sort()
@@ -67,11 +67,11 @@ const groupedProducts = computed(() => {
       const brandProducts = grouped[brand]
       if (brandProducts) {
         result[brand] = Object.values(brandProducts).sort((a, b) => {
-          // Ordenar por nome, depois por preço
-          if (a.name !== b.name) {
-            return a.name.localeCompare(b.name)
-          }
-          return parseFloat(a.salePrice) - parseFloat(b.salePrice)
+          // Ordenar por preço (menor para o maior), depois por nome
+          const priceA = parseFloat(a.salePrice)
+          const priceB = parseFloat(b.salePrice)
+          if (priceA !== priceB) return priceA - priceB
+          return a.name.localeCompare(b.name)
         })
       }
     })
@@ -79,10 +79,22 @@ const groupedProducts = computed(() => {
   return result
 })
 
+// Lista plana ordenada por preço (menor → maior) para exibição
+const productsByPrice = computed(() => {
+  const flat: GroupedProduct[] = []
+  Object.values(groupedProducts.value).forEach(arr => flat.push(...arr))
+  return flat.sort((a, b) => {
+    const priceA = parseFloat(a.salePrice)
+    const priceB = parseFloat(b.salePrice)
+    if (priceA !== priceB) return priceA - priceB
+    if (a.brand !== b.brand) return a.brand.localeCompare(b.brand)
+    return a.name.localeCompare(b.name)
+  })
+})
+
 // Gerar markdown
 const markdownContent = computed(() => {
   const lines: string[] = []
-  const grouped = groupedProducts.value
 
   // Título com emojis
   lines.push('🔥 *BOSS PODS PMW* 🔥')
@@ -99,23 +111,18 @@ const markdownContent = computed(() => {
   lines.push('')
   lines.push('')
 
-  // Produtos agrupados por marca
-  Object.keys(grouped).forEach(brand => {
-    const brandProducts = grouped[brand]
-    if (brandProducts) {
-      brandProducts.forEach(product => {
-        const price = parseFloat(product.salePrice).toFixed(2).replace('.', ',')
-        // Formato: 🔴 NOME - R$PRECO (sem negrito, apenas emoji)
-        lines.push(`🔴 *${product.name} - R$${price}*`)
+  // Produtos ordenados por preço (menor → maior), com marca
+  productsByPrice.value.forEach(product => {
+    const price = parseFloat(product.salePrice).toFixed(2).replace('.', ',')
+    // Formato: 🔴 MARCA NOME - R$PRECO
+    lines.push(`🔴 *${product.brand} ${product.name} - R$${price}*`)
 
-        // Sabores com asterisco
-        product.flavors.sort().forEach(flavor => {
-          lines.push(`- ${flavor}`)
-        })
+    // Sabores com asterisco
+    product.flavors.sort().forEach(flavor => {
+      lines.push(`- ${flavor}`)
+    })
 
-        lines.push('')
-      })
-    }
+    lines.push('')
   })
 
   return lines.join('\n')
