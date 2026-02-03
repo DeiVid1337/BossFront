@@ -10,6 +10,8 @@ import { ValidationError } from '@/api/types'
 import router from '@/router'
 
 const TOKEN_KEY = 'token'
+/** TTL do cache do perfil (me): evita refetch em navegações rápidas */
+const USER_CACHE_TTL_MS = 2 * 60 * 1000
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -17,6 +19,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const lastUserFetchTs = ref(0)
 
   // Getters
   const isAuthenticated = computed(() => !!token.value && !!user.value)
@@ -39,6 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
     setToken(null)
     setUser(null)
     error.value = null
+    lastUserFetchTs.value = 0
   }
 
   async function login(email: string, password: string) {
@@ -90,12 +94,22 @@ export const useAuthStore = defineStore('auth', () => {
       return
     }
 
+    // Cache: evitar refetch em navegações rápidas (TTL 2 min)
+    if (
+      user.value &&
+      lastUserFetchTs.value > 0 &&
+      Date.now() - lastUserFetchTs.value < USER_CACHE_TTL_MS
+    ) {
+      return
+    }
+
     loading.value = true
     error.value = null
 
     try {
       const userData = await me()
       setUser(userData)
+      lastUserFetchTs.value = Date.now()
     } catch (err) {
       // 401 ou outro erro - limpar autenticação
       clearAuth()

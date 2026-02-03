@@ -12,6 +12,10 @@ const currentStoreId = ref<number | null>(null)
 const stores = ref<Store[]>([])
 const loading = ref(false)
 
+/** Cache da lista de lojas (Admin): TTL 5 min para reduzir chamadas repetidas */
+const STORES_CACHE_TTL_MS = 5 * 60 * 1000
+let storesCache: { data: Store[]; ts: number } | null = null
+
 /**
  * Composable para gerenciar contexto de loja
  */
@@ -56,7 +60,7 @@ export function useStoreContext() {
   }
 
   /**
-   * Carrega lojas (apenas Admin precisa)
+   * Carrega lojas (apenas Admin precisa). Usa cache em memória (TTL 5 min).
    */
   async function loadStores() {
     if (authStore.user?.role !== 'admin') {
@@ -64,11 +68,19 @@ export function useStoreContext() {
       return
     }
 
+    if (
+      storesCache &&
+      Date.now() - storesCache.ts < STORES_CACHE_TTL_MS
+    ) {
+      stores.value = storesCache.data
+      return
+    }
+
     loading.value = true
     try {
-      // Não enviar is_active se não for necessário - deixar o backend retornar todas
       const response = await getStores({ per_page: 100 })
       stores.value = response.data
+      storesCache = { data: response.data, ts: Date.now() }
     } catch (error) {
       console.error('Erro ao carregar lojas:', error)
       stores.value = []
@@ -95,10 +107,11 @@ export function useStoreContext() {
     }
   }
 
-  // Observar mudanças no usuário
+  // Observar mudanças no usuário; limpar cache de lojas ao deslogar
   watch(
     () => authStore.user,
-    () => {
+    (user) => {
+      if (!user) storesCache = null
       initialize()
     },
     { immediate: true }

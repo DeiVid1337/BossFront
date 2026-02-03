@@ -71,8 +71,35 @@ interface RequestConfig {
   requiresAuth?: boolean
 }
 
+/** Delay em ms antes de retry em falha de rede (apenas GET) */
+const RETRY_DELAY_MS = 800
+/** Número máximo de tentativas para GET (1 retry = 2 tentativas no total) */
+const GET_MAX_ATTEMPTS = 2
+
 /**
- * Cliente HTTP base
+ * Executa uma única tentativa de fetch e trata resposta/erro
+ */
+async function doFetch<T>(url: string, requestInit: RequestInit): Promise<T> {
+  const response = await fetch(url, requestInit)
+
+  if (!response.ok) {
+    await handleErrorResponse(response)
+  }
+
+  const data = await response.json()
+
+  if (data && typeof data === 'object' && 'data' in data) {
+    if ('meta' in data) {
+      return data as T
+    }
+    return data.data as T
+  }
+
+  return data as T
+}
+
+/**
+ * Cliente HTTP base (com retry para GET em falha de rede)
  */
 export async function request<T>(path: string, config: RequestConfig = {}): Promise<T> {
   const { method = 'GET', body, params, requiresAuth = true } = config
@@ -81,13 +108,11 @@ export async function request<T>(path: string, config: RequestConfig = {}): Prom
   const queryString = buildQueryString(params)
   const url = `${baseUrl}${path}${queryString ? `?${queryString}` : ''}`
 
-  // Headers
   const headers: HeadersInit = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
   }
 
-  // Adicionar token se necessário
   if (requiresAuth) {
     const token = getToken()
     if (token) {
@@ -95,49 +120,36 @@ export async function request<T>(path: string, config: RequestConfig = {}): Prom
     }
   }
 
-  // Configuração da requisição
   const requestInit: RequestInit = {
     method,
     headers,
   }
 
-  // Adicionar body se necessário
   if (body !== undefined) {
     requestInit.body = JSON.stringify(body)
   }
 
-  try {
-    const response = await fetch(url, requestInit)
+  const isGet = method === 'GET'
+  let lastError: unknown
 
-    // Tratar erros HTTP
-    if (!response.ok) {
-      await handleErrorResponse(response)
-    }
-
-    // Parse da resposta
-    const data = await response.json()
-
-    // Se a resposta tem formato { data: T, meta?: ... }, verificar se é paginada
-    if (data && typeof data === 'object' && 'data' in data) {
-      // Se tem meta, é uma resposta paginada - retornar objeto completo
-      if ('meta' in data) {
-        return data as T
+  for (let attempt = 1; attempt <= (isGet ? GET_MAX_ATTEMPTS : 1); attempt++) {
+    try {
+      return await doFetch<T>(url, requestInit)
+    } catch (error) {
+      lastError = error
+      if (error instanceof ApiError || error instanceof ValidationError) {
+        throw error
       }
-      // Caso contrário, retornar apenas data
-      return data.data as T
+      // Falha de rede: retry apenas para GET e se ainda há tentativas
+      if (isGet && attempt < GET_MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
+        continue
+      }
+      throw new Error('Network error or server unavailable')
     }
-
-    // Caso contrário, retornar a resposta completa
-    return data as T
-  } catch (error) {
-    // Se já é um ApiError, re-lançar
-    if (error instanceof ApiError || error instanceof ValidationError) {
-      throw error
-    }
-
-    // Erro de rede ou outro erro
-    throw new Error('Network error or server unavailable')
   }
+
+  throw lastError instanceof Error ? lastError : new Error('Network error or server unavailable')
 }
 
 /**

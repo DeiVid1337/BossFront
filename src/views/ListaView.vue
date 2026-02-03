@@ -23,6 +23,15 @@ const error = ref<string | null>(null)
 const storeProducts = ref<StoreProduct[]>([])
 const copySuccess = ref(false)
 
+/** Limite de performance: máx. páginas e itens na lista (evita muitas requisições em sequência) */
+const MAX_LIST_PAGES = 5
+const MAX_LIST_ITEMS = 500
+
+/** True quando a lista foi truncada por atingir o limite (lista parcial) */
+const listTruncated = ref(false)
+/** Total de itens disponíveis na API (quando truncado), para exibir no aviso */
+const totalAvailableFromApi = ref<number | null>(null)
+
 const stockSync = useStockSync(storeId)
 
 // Agrupar produtos por marca, nome e preço (estoque = 0 não entra na lista)
@@ -104,6 +113,12 @@ const markdownContent = computed(() => {
   lines.push('')
   lines.push('')
 
+  // Aviso de lista parcial (performance: limite de itens/páginas)
+  if (listTruncated.value && totalAvailableFromApi.value != null) {
+    lines.push(`⚠️ _Lista parcial: mostrando os primeiros ${storeProducts.value.length} de ${totalAvailableFromApi.value} produtos._`)
+    lines.push('')
+  }
+
   // Informações promocionais
   lines.push('⚫️ *Boss Fidelidade* - Junte 10 selos e troque por um *IGNITE V80*')
   lines.push('')
@@ -139,31 +154,48 @@ async function loadProducts() {
 
   loading.value = true
   error.value = null
+  listTruncated.value = false
+  totalAvailableFromApi.value = null
 
   try {
-    // Buscar todos os produtos ativos com estoque (máximo 100 por página)
     const allProducts: StoreProduct[] = []
     let currentPage = 1
     let hasMore = true
+    let totalFromMeta: number | null = null
 
     while (hasMore) {
-      // Não enviar is_active como parâmetro, pois pode causar erro de validação
-      // O filtro será feito no frontend após receber os dados
+      // Limite de performance: não buscar mais que MAX_LIST_PAGES ou MAX_LIST_ITEMS
+      if (currentPage > MAX_LIST_PAGES || allProducts.length >= MAX_LIST_ITEMS) {
+        listTruncated.value = true
+        if (totalFromMeta != null) totalAvailableFromApi.value = totalFromMeta
+        break
+      }
+
       const response = await getStoreProducts(storeId.value, {
-        per_page: 100, // Limite máximo da API
+        per_page: 100,
         page: currentPage,
       })
 
       if (response && typeof response === 'object' && 'data' in response) {
         const products = Array.isArray(response.data) ? response.data : []
-        // Estoque = 0 não entra na lista; apenas ativos com product
         const filtered = products.filter(sp => sp.stock_quantity > 0 && sp.product && sp.is_active)
-        allProducts.push(...filtered)
-
-        // Verificar se há mais páginas
         const meta = response.meta
-        if (meta && meta.current_page && meta.last_page) {
-          hasMore = meta.current_page < meta.last_page
+
+        if (meta && typeof meta.total === 'number') totalFromMeta = meta.total
+
+        // Respeitar limite de itens: não adicionar além de MAX_LIST_ITEMS
+        const remaining = MAX_LIST_ITEMS - allProducts.length
+        if (filtered.length <= remaining) {
+          allProducts.push(...filtered)
+        } else {
+          allProducts.push(...filtered.slice(0, remaining))
+          listTruncated.value = true
+          if (totalFromMeta != null) totalAvailableFromApi.value = totalFromMeta
+          hasMore = false
+        }
+
+        if (meta && meta.current_page != null && meta.last_page != null) {
+          hasMore = meta.current_page < meta.last_page && !listTruncated.value
           currentPage++
         } else {
           hasMore = false
@@ -275,6 +307,13 @@ onMounted(() => {
         class="lista-content-wrapper"
       >
         <div class="lista-card">
+          <div
+            v-if="listTruncated && totalAvailableFromApi != null"
+            class="lista-partial-notice"
+            role="status"
+          >
+            Lista parcial: mostrando os primeiros {{ storeProducts.length }} de {{ totalAvailableFromApi }} produtos.
+          </div>
           <div class="lista-header">
             <h2 class="lista-subtitle">Lista Formatada</h2>
             <button
@@ -619,6 +658,16 @@ onMounted(() => {
   .lista-card {
     padding: 48px 56px;
   }
+}
+
+.lista-partial-notice {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: rgba(255, 140, 0, 0.15);
+  border: 1px solid rgba(255, 140, 0, 0.4);
+  border-radius: 12px;
+  font-size: 14px;
+  color: #FFB84D;
 }
 
 .lista-header {

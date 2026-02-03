@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
-import AuthLayout from '@/layouts/AuthLayout.vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
+
+// Layouts lazy: reduzem o bundle inicial e melhoram FCP (ex.: tela de login)
+const AuthLayout = defineAsyncComponent(() => import('@/layouts/AuthLayout.vue'))
+const DefaultLayout = defineAsyncComponent(() => import('@/layouts/DefaultLayout.vue'))
 
 const route = useRoute()
 
